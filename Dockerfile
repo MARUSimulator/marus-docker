@@ -21,10 +21,10 @@ RUN useradd -ms /bin/bash ${USERNAME} && adduser ${USERNAME} sudo
 RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 RUN usermod -a -G sudo,dialout ${USERNAME}
 
-#Basic dependencies
+# Basic dependencies
 RUN apt -y update && apt -y install firefox && apt -y install git-lfs && apt -y install wget &&  apt -y install git && apt -y install blender && apt -y install pip
 
-#Install Unity hub
+# Install Unity hub
 RUN sh -c 'echo "deb https://hub.unity3d.com/linux/repos/deb stable main" > /etc/apt/sources.list.d/unityhub.list' \
 && wget -qO - https://hub.unity3d.com/linux/keys/public | apt-key add \
 && apt -y update
@@ -42,7 +42,7 @@ RUN sudo apt install -y software-properties-common && sudo add-apt-repository -y
     && sudo apt update && sudo apt install -y curl \
     && sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg \
     && sudo echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
-RUN sudo apt update && sudo DEBIAN_FRONTEND=noninteractive apt install -y ros-galactic-desktop && sudo apt install -y ros-dev-tools
+RUN sudo apt update && sudo DEBIAN_FRONTEND=noninteractive apt install -y ros-${ROS_DISTRO}-desktop && sudo apt install -y ros-dev-tools
 
 RUN mkdir ${HOME}/.ssh -m 0700
 RUN ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts
@@ -52,7 +52,7 @@ RUN echo "$ssh_prv_key" > ${HOME}/.ssh/id_rsa \
    && chmod 600 ${HOME}/.ssh/id_rsa \
    && chmod 600 ${HOME}/.ssh/id_rsa.pub
 
-##CLONE MARUS_EXAMPLE
+# Clone marus-example
 WORKDIR ${HOME}
 RUN git clone git@github.com:MARUSimulator/marus-example.git
 WORKDIR ./marus-example
@@ -60,12 +60,21 @@ RUN git submodule update --init --recursive
 
 RUN source /opt/ros/galactic/setup.bash \
     && mkdir -p ${HOME}/ros2_ws/src
+
+# Clone grpc_ros_adapter
 WORKDIR ${HOME}/ros2_ws/src
 RUN git clone git@github.com:MARUSimulator/grpc_ros_adapter.git
 WORKDIR ${HOME}/ros2_ws/src/grpc_ros_adapter
 RUN git checkout galactic && pip install -r requirements.txt && git submodule update --init --recursive
+
+# Clone uuv_sensor_msgs
+WORKDIR ${HOME}/ros2_ws/src
+RUN git clone git@github.com:labust/uuv_sensor_msgs.git
+WORKDIR ${HOME}/ros2_ws/src/uuv_sensor_msgs
+RUN git checkout galactic
+
 WORKDIR ${HOME}/ros2_ws
-RUN colcon build
+RUN source /opt/ros/galactic/setup.bash && colcon build
 
 COPY ./files ${HOME}/files
 
